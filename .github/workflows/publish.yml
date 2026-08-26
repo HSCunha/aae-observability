@@ -53,7 +53,7 @@ jobs:
           /tmp/aae-observability-smoke/bin/python -m pip install dist/*.whl
           /tmp/aae-observability-smoke/bin/python -c "import aae_observability; print(aae_observability.__version__)"
           /tmp/aae-observability-smoke/bin/aae-observability version
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v7
         with:
           name: python-package-distributions
           path: dist/
