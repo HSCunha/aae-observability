@@ -1,0 +1,98 @@
+name: Publish Python distribution
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Package index
+        required: true
+        type: choice
+        options:
+          - testpypi
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install build and validation tools
+        run: python -m pip install --upgrade build twine
+      - name: Validate tag and source version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          tag = "${{ github.ref_name }}"
+          version = re.search(r'^version = "([^"]+)"', Path("pyproject.toml").read_text(), re.M).group(1)
+          if tag != f"v{version}":
+              raise SystemExit(f"tag {tag} does not match v{version}")
+          PY
+      - name: Build wheel and source distribution
+        run: python -m build
+      - name: Check distribution metadata and README
+        run: python -m twine check --strict dist/*
+      - name: Validate artifact contents
+        run: python scripts/release_check.py
+      - name: Smoke test wheel in clean environment
+        run: |
+          python -m venv /tmp/aae-observability-smoke
+          /tmp/aae-observability-smoke/bin/python -m pip install --upgrade pip
+          /tmp/aae-observability-smoke/bin/python -m pip install dist/*.whl
+          /tmp/aae-observability-smoke/bin/python -c "import aae_observability; print(aae_observability.__version__)"
+          /tmp/aae-observability-smoke/bin/aae-observability version
+      - uses: actions/upload-artifact@v5
+        with:
+          name: python-package-distributions
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-testpypi:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/aae-observability
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: python-package-distributions
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          attestations: true
+
+  publish-pypi:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/aae-observability
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v6
+        with:
+          name: python-package-distributions
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          attestations: true

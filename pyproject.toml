@@ -1,0 +1,100 @@
+[build-system]
+requires = ["hatchling>=1.26,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "aae-observability"
+version = "0.6.3"
+description = "Framework-agnostic AI agent governance and OpenTelemetry telemetry."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "aae_observability maintainers" }]
+keywords = ["ai-agents", "governance", "opentelemetry", "azure-event-hubs"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Typing :: Typed",
+]
+dependencies = [
+  "opentelemetry-api>=1.29,<2",
+  "opentelemetry-sdk>=1.29,<2",
+  "opentelemetry-exporter-otlp-proto-common>=1.29,<2",
+  "azure-eventhub>=5.11,<6",
+  "azure-identity>=1.17,<2",
+  "pydantic>=2.7,<3",
+  "PyYAML>=6,<7",
+]
+
+[project.optional-dependencies]
+keyvault = ["azure-keyvault-secrets>=4.8,<5"]
+maf = ["agent-framework>=1.0.0b1,<2"]
+langchain = ["langchain-core>=0.3,<2"]
+all = ["agent-framework>=1.0.0b1,<2", "langchain-core>=0.3,<2", "azure-keyvault-secrets>=4.8,<5"]
+dev = [
+  "build>=1.2,<2",
+  "hatchling>=1.26,<2",
+  "mypy>=1.11,<2",
+  "pre-commit>=3.7,<5",
+  "pytest>=8,<10",
+  "pytest-cov>=5,<8",
+  "ruff>=0.6,<1",
+  "twine>=7,<8",
+  "pip-audit>=2.9,<3",
+  "validate-pyproject>=0.20,<1",
+]
+
+[project.scripts]
+aae-observability = "aae_observability.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aae_observability"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/README.md",
+  "/RELEASE.md",
+  "/MIGRATION.md",
+  "/RENAME_IMPACT.md",
+  "/PUBLISHING.md",
+  "/VALIDATION.md",
+  "/scripts",
+  "/LICENSE",
+  "/SECURITY.md",
+  "/CONTRIBUTING.md",
+  "/CODE_OF_CONDUCT.md",
+  "/requirements-dev.lock",
+  "/.github",
+  "/pyproject.toml",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src/aae_observability"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers --cov=aae_observability --cov-report=term-missing --cov-fail-under=85"
+testpaths = ["tests"]
+markers = ["integration: opt-in Azure integration tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+branch = true
+source = ["aae_observability"]
